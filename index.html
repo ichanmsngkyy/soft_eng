@@ -5,8 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PC Parts Inventory Management System</title>
     <link rel="stylesheet" href="style.css" />
+    <!-- Prevent content flash during authentication check -->
+    <style>
+      /* Hide main content until authentication is verified */
+      .container {
+        display: none;
+      }
+
+      /* Loading screen shown during authentication check */
+      .auth-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        color: white;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      .auth-loading .logo {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      .auth-loading .title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      .auth-loading .message {
+        font-size: 1.1rem;
+        margin-bottom: 40px;
+        opacity: 0.9;
+      }
+
+      .auth-loading .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.05);
+          opacity: 0.8;
+        }
+      }
+
+      /* Smooth transition for main content */
+      .container.loaded {
+        display: flex;
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out forwards;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
   </head>
   <body>
+    <!-- Authentication Loading Screen -->
+    <div id="authLoading" class="auth-loading">
+      <div class="logo">🖥️</div>
+      <div class="title">PC Inventory</div>
+      <div class="message">Management System</div>
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Main Application Container -->
     <div class="container">
       <!-- Sidebar -->
       <div class="sidebar">
@@ -246,6 +345,55 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Order Row Template -->
+          <template id="order-row-template">
+            <tr class="order-row">
+              <td><strong class="order-id"></strong></td>
+              <td class="part-name"></td>
+              <td class="order-date"></td>
+              <td class="quantity-cell">
+                <span class="quantity-badge"></span>
+              </td>
+              <td class="status-cell">
+                <span class="status-badge"></span>
+              </td>
+              <td class="actions-cell">
+                <div class="actions">
+                  <button
+                    class="btn btn-warning btn-sm edit-btn"
+                    title="Edit Order"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    class="btn btn-danger btn-sm delete-btn"
+                    title="Delete Order"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+
+          <!-- Orders Divider Template -->
+          <template id="orders-divider-template">
+            <tr class="full-line-divider">
+              <td colspan="6">
+                <div class="divider-line"></div>
+              </td>
+            </tr>
+          </template>
+
+          <!-- Empty State Template -->
+          <template id="empty-orders-template">
+            <tr class="empty-state">
+              <td colspan="6">
+                <div class="empty-message">No orders found.</div>
+              </td>
+            </tr>
+          </template>
         </div>
 
         <!-- Activity History Page -->

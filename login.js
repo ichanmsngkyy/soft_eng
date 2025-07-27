@@ -1,9 +1,12 @@
-// Login functionality
+// Login functionality - Production Ready
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const rememberMeCheckbox = document.getElementById('rememberMe');
+    
+    // Check for any messages from redirect (like session expired)
+    checkRedirectMessages();
     
     // Check if user is already logged in
     checkExistingSession();
@@ -25,12 +28,13 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSavedCredentials();
 });
 
-// Single user credentials - In production, this would be handled by your backend
+// Demo credentials - Replace with backend API call in production
 const validCredentials = {
     username: 'admin',
     password: 'admin123'
 };
 
+// Main login handler
 function handleLogin(e) {
     e.preventDefault();
     
@@ -47,68 +51,111 @@ function handleLogin(e) {
     // Show loading state
     setLoadingState(true);
     
-    // Simulate API call delay
+    // Simulate API call delay - Replace with actual API call in production
     setTimeout(() => {
-        // Check credentials
-        if (username === validCredentials.username && password === validCredentials.password) {
-            // Successful login
-            const sessionData = {
-                username: username,
-                loginTime: new Date().toISOString(),
-                sessionId: generateSessionId()
-            };
-            
-            // Store session data
-            if (rememberMe) {
-                localStorage.setItem('userSession', JSON.stringify(sessionData));
-                localStorage.setItem('savedUsername', username);
-            } else {
-                sessionStorage.setItem('userSession', JSON.stringify(sessionData));
-            }
-            
-            showMessage('Login successful! Redirecting...', 'success');
-            
-            // Redirect to main application
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1500);
-            
-        } else {
-            // Failed login
-            showMessage('Invalid username or password. Please try again.', 'error');
-            setLoadingState(false);
-            
-            // Shake animation for error
-            document.querySelector('.login-card').style.animation = 'shake 0.5s ease-in-out';
-            setTimeout(() => {
-                document.querySelector('.login-card').style.animation = '';
-            }, 500);
-            
-            // Clear password field
-            document.getElementById('password').value = '';
-            document.getElementById('password').focus();
-        }
-    }, 1000); // Simulate network delay
+        authenticateUser(username, password, rememberMe);
+    }, 1000);
 }
 
+// Authentication function - Replace with backend API in production
+function authenticateUser(username, password, rememberMe) {
+    // TODO: Replace this with actual backend API call
+    // Example:
+    // fetch('/api/login', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({ username, password })
+    // })
+    // .then(response => response.json())
+    // .then(data => {
+    //     if (data.success) {
+    //         handleLoginSuccess(data.user, data.token, rememberMe);
+    //     } else {
+    //         handleLoginError(data.message);
+    //     }
+    // })
+    // .catch(error => handleLoginError('Network error'));
+    
+    // Demo authentication
+    if (username === validCredentials.username && password === validCredentials.password) {
+        handleLoginSuccess({ username: username }, 'demo-token-123', rememberMe);
+    } else {
+        handleLoginError('Invalid username or password');
+    }
+}
+
+// Handle successful login
+function handleLoginSuccess(user, token, rememberMe) {
+    const sessionData = {
+        username: user.username,
+        token: token, // Store actual JWT token in production
+        loginTime: new Date().toISOString(),
+        sessionId: generateSessionId()
+    };
+    
+    // Store session data
+    if (rememberMe) {
+        localStorage.setItem('userSession', JSON.stringify(sessionData));
+        localStorage.setItem('savedUsername', user.username);
+    } else {
+        sessionStorage.setItem('userSession', JSON.stringify(sessionData));
+    }
+    
+    showMessage('Login successful! Redirecting...', 'success');
+    
+    // Redirect to main application
+    setTimeout(() => {
+        window.location.href = 'index.html';
+    }, 1500);
+}
+
+// Handle login error
+function handleLoginError(message) {
+    showMessage(message || 'Login failed. Please try again.', 'error');
+    setLoadingState(false);
+    
+    // Shake animation for error
+    const loginCard = document.querySelector('.login-card');
+    if (loginCard) {
+        loginCard.style.animation = 'shake 0.5s ease-in-out';
+        setTimeout(() => {
+            loginCard.style.animation = '';
+        }, 500);
+    }
+    
+    // Clear password field and focus
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) {
+        passwordInput.value = '';
+        passwordInput.focus();
+    }
+}
+
+// Set loading state for login button
 function setLoadingState(isLoading) {
     const loginBtn = document.querySelector('.login-btn');
     const btnText = document.querySelector('.btn-text');
     const btnLoading = document.querySelector('.btn-loading');
     
-    if (isLoading) {
-        loginBtn.disabled = true;
-        loginBtn.classList.add('loading');
-        btnText.style.display = 'none';
-        btnLoading.style.display = 'inline';
-    } else {
-        loginBtn.disabled = false;
-        loginBtn.classList.remove('loading');
-        btnText.style.display = 'inline';
-        btnLoading.style.display = 'none';
+    if (loginBtn) {
+        loginBtn.disabled = isLoading;
+        if (isLoading) {
+            loginBtn.classList.add('loading');
+        } else {
+            loginBtn.classList.remove('loading');
+        }
+    }
+    
+    if (btnText) {
+        btnText.style.display = isLoading ? 'none' : 'inline';
+    }
+    
+    if (btnLoading) {
+        btnLoading.style.display = isLoading ? 'inline' : 'none';
     }
 }
 
+// Check for existing valid session
 function checkExistingSession() {
     const sessionData = localStorage.getItem('userSession') || sessionStorage.getItem('userSession');
     
@@ -131,46 +178,71 @@ function checkExistingSession() {
                 return;
             } else {
                 // Session expired, clear it
-                localStorage.removeItem('userSession');
-                sessionStorage.removeItem('userSession');
+                clearStoredSessions();
                 showMessage('Session expired. Please login again.', 'warning');
             }
         } catch (error) {
             // Invalid session data, clear it
-            localStorage.removeItem('userSession');
-            sessionStorage.removeItem('userSession');
+            clearStoredSessions();
+            console.error('Error parsing session data:', error);
         }
     }
 }
 
-function loadSavedCredentials() {
-    const savedUsername = localStorage.getItem('savedUsername');
-    if (savedUsername) {
-        document.getElementById('username').value = savedUsername;
-        document.getElementById('rememberMe').checked = true;
-        document.getElementById('password').focus();
+// Check for messages from redirects
+function checkRedirectMessages() {
+    const message = sessionStorage.getItem('loginMessage');
+    if (message) {
+        showMessage(message, 'warning');
+        sessionStorage.removeItem('loginMessage');
     }
 }
 
-function generateSessionId() {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+// Load saved username if remember me was checked
+function loadSavedCredentials() {
+    const savedUsername = localStorage.getItem('savedUsername');
+    if (savedUsername) {
+        const usernameInput = document.getElementById('username');
+        const rememberMeCheckbox = document.getElementById('rememberMe');
+        const passwordInput = document.getElementById('password');
+        
+        if (usernameInput) usernameInput.value = savedUsername;
+        if (rememberMeCheckbox) rememberMeCheckbox.checked = true;
+        if (passwordInput) passwordInput.focus();
+    }
 }
 
+// Clear all stored sessions
+function clearStoredSessions() {
+    localStorage.removeItem('userSession');
+    sessionStorage.removeItem('userSession');
+}
+
+// Generate session ID
+function generateSessionId() {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+}
+
+// Toggle password visibility
 function togglePassword() {
     const passwordInput = document.getElementById('password');
     const toggleIcon = document.querySelector('.toggle-password');
     
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        toggleIcon.textContent = '🙈';
-    } else {
-        passwordInput.type = 'password';
-        toggleIcon.textContent = '👁️';
+    if (passwordInput && toggleIcon) {
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.textContent = '🙈';
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.textContent = '👁️';
+        }
     }
 }
 
+// Show message notifications
 function showMessage(message, type) {
     const messageContainer = document.getElementById('messageContainer');
+    if (!messageContainer) return;
     
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
@@ -178,31 +250,45 @@ function showMessage(message, type) {
     
     messageContainer.appendChild(messageDiv);
     
-    // Show message
+    // Show message with animation
     setTimeout(() => {
         messageDiv.classList.add('show');
     }, 100);
     
-    // Hide message after 4 seconds
+    // Auto-hide message after 4 seconds
     setTimeout(() => {
-        messageDiv.classList.remove('show');
-        setTimeout(() => {
-            if (messageContainer.contains(messageDiv)) {
-                messageContainer.removeChild(messageDiv);
-            }
-        }, 300);
+        if (messageDiv.classList.contains('show')) {
+            messageDiv.classList.remove('show');
+            setTimeout(() => {
+                if (messageContainer.contains(messageDiv)) {
+                    messageContainer.removeChild(messageDiv);
+                }
+            }, 300);
+        }
     }, 4000);
 }
 
-// Clear any leftover error states on input
+// Clear input error states on typing
 document.addEventListener('input', function(e) {
     if (e.target.type === 'text' || e.target.type === 'password') {
         e.target.style.borderColor = '#e0e6ed';
     }
 });
 
-// Show demo info in console
+// Prevent form submission with empty fields
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement.id === 'username' || activeElement.id === 'password')) {
+            e.preventDefault();
+            handleLogin(e);
+        }
+    }
+});
+
+// Development console info
 console.log('%c PC Inventory Management System ', 'background: #3498db; color: white; padding: 5px 10px; border-radius: 3px; font-weight: bold;');
 console.log('%c Demo Login Credentials: ', 'color: #2c3e50; font-weight: bold;');
 console.log('Username: admin');
 console.log('Password: admin123');
+console.log('%c Ready for backend integration! ', 'background: #2ecc71; color: white; padding: 5px 10px; border-radius: 3px; font-weight: bold;');
