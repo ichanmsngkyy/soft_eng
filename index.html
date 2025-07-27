@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PC Parts Inventory Management System</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <span class="logo-icon">🖥️</span>
+            PC Inventory
+          </div>
+        </div>
+        <nav class="nav-menu">
+          <a href="#" class="nav-item active" data-page="dashboard">
+            <span class="nav-icon">📊</span>
+            Dashboard
+          </a>
+          <a href="#" class="nav-item" data-page="inventory">
+            <span class="nav-icon">📦</span>
+            Inventory
+          </a>
+          <a href="#" class="nav-item" data-page="orders">
+            <span class="nav-icon">📋</span>
+            Order Management
+          </a>
+          <a href="#" class="nav-item" data-page="activity">
+            <span class="nav-icon">📝</span>
+            Activity History
+          </a>
+          <a href="#" class="nav-item" data-page="reports">
+            <span class="nav-icon">📈</span>
+            Reports & Analytics
+          </a>
+          <a href="#" class="nav-item logout" onclick="logout()">
+            <span class="nav-icon">🚪</span>
+            Logout
+          </a>
+        </nav>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+          <div class="header-left">
+            <h1 id="pageTitle">📊 Dashboard Overview</h1>
+          </div>
+          <div class="header-right">
+            <span class="date-time" id="dateTime"></span>
+            <div class="notification-icon" onclick="showLowStockAlert()">
+              <span>🔔</span>
+              <span class="notification-badge" id="notificationBadge">0</span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page active">
+          <!-- Stats Cards -->
+          <div class="stats-grid">
+            <div class="stat-card blue">
+              <div class="stat-icon">📦</div>
+              <div class="stat-info">
+                <div class="stat-number" id="totalParts">0</div>
+                <div class="stat-label">Total Parts</div>
+              </div>
+            </div>
+            <div class="stat-card orange">
+              <div class="stat-icon">⏳</div>
+              <div class="stat-info">
+                <div class="stat-number" id="lowStockItems">0</div>
+                <div class="stat-label">Low Stock Alerts</div>
+              </div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-icon">💰</div>
+              <div class="stat-info">
+                <div class="stat-number" id="totalValue">₱0</div>
+                <div class="stat-label">Total Inventory Value</div>
+              </div>
+            </div>
+            <div class="stat-card red">
+              <div class="stat-icon">📋</div>
+              <div class="stat-info">
+                <div class="stat-number" id="pendingOrders">0</div>
+                <div class="stat-label">Pending Orders</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard Analytics -->
+          <div class="dashboard-analytics">
+            <div class="chart-container">
+              <h3>📊 Inventory Analytics</h3>
+              <div class="chart-content">
+                <div class="chart-section">
+                  <h4>💾 Parts by Category</h4>
+                  <div class="bar-chart" id="categoryChart"></div>
+                </div>
+                <div class="chart-section">
+                  <h4>📈 Stock Level Distribution</h4>
+                  <div class="pie-chart" id="stockChart">
+                    <div class="pie-legend">
+                      <div class="legend-item">
+                        <span class="legend-color in-stock"></span>
+                        <span>In Stock</span>
+                      </div>
+                      <div class="legend-item">
+                        <span class="legend-color low-stock"></span>
+                        <span>Low Stock</span>
+                      </div>
+                      <div class="legend-item">
+                        <span class="legend-color out-stock"></span>
+                        <span>Out of Stock</span>
+                      </div>
+                      <div class="legend-item">
+                        <span class="legend-color discontinued"></span>
+                        <span>Discontinued</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inventory Page -->
+        <div id="inventory-page" class="page">
+          <div class="page-controls">
+            <div class="search-section">
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="🔍 Search parts by name, brand, or part ID..."
+              />
+              <select id="categoryFilter" class="filter-select">
+                <option value="">All Categories</option>
+                <option value="Processor (CPU)">Processor (CPU)</option>
+                <option value="Memory (RAM)">Memory (RAM)</option>
+                <option value="Graphic Card (GPU)">Graphic Card (GPU)</option>
+                <option value="Storage">Storage</option>
+                <option value="Motherboard">Motherboard</option>
+                <option value="Power Supply">Power Supply</option>
+                <option value="Cooling System">Cooling System</option>
+                <option value="Computer Case">Computer Case</option>
+                <option value="Peripheral">Peripheral</option>
+              </select>
+              <select id="statusFilter" class="filter-select">
+                <option value="">All Status</option>
+                <option value="In Stock">In Stock</option>
+                <option value="Low Stock">Low Stock</option>
+                <option value="Out of Stock">Out of Stock</option>
+                <option value="Discontinued">Discontinued</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="openAddPartModal()">
+              + Add New Part
+            </button>
+          </div>
+
+          <div class="inventory-table">
+            <table id="partsTable">
+              <thead>
+                <tr>
+                  <th>Part ID</th>
+                  <th>Part Name</th>
+                  <th>Brand</th>
+                  <th>Category</th>
+                  <th>Unit Price</th>
+                  <th>Quantity</th>
+                  <th>Alert Threshold</th>
+                  <th>Stock Level</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="partsTableBody">
+                <!-- Parts will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Orders Page -->
+        <div id="orders-page" class="page">
+          <div class="page-controls">
+            <div class="search-section">
+              <input
+                type="text"
+                id="orderSearchInput"
+                placeholder="🔍 Search orders by ID or part name..."
+              />
+              <select id="orderStatusFilter" class="filter-select">
+                <option value="">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+              <input type="date" id="orderDateFilter" class="filter-select" />
+            </div>
+            <button class="btn btn-primary" onclick="openAddOrderModal()">
+              + Create New Order
+            </button>
+          </div>
+
+          <div class="orders-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Part</th>
+                  <th>Date</th>
+                  <th>Quantity</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <!-- Orders will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Activity History Page -->
+        <div id="activity-page" class="page">
+          <div class="page-controls">
+            <div class="search-section">
+              <input
+                type="date"
+                id="activityDateFrom"
+                class="filter-select"
+                placeholder="From Date"
+              />
+              <input
+                type="date"
+                id="activityDateTo"
+                class="filter-select"
+                placeholder="To Date"
+              />
+              <select id="actionTypeFilter" class="filter-select">
+                <option value="">All Actions</option>
+                <option value="Addition">Addition</option>
+                <option value="Update">Update</option>
+                <option value="Order Impact">Order Impact</option>
+                <option value="Deletion">Deletion</option>
+                <option value="Adjustment">Adjustment</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" onclick="clearActivityFilters()">
+              Clear Filters
+            </button>
+          </div>
+
+          <div class="activity-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Part Name</th>
+                  <th>Part ID</th>
+                  <th>Action Type</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="activityTableBody">
+                <!-- Activity history will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Reports Page -->
+        <div id="reports-page" class="page">
+          <h2>📈 Reports & Analytics</h2>
+          <div class="reports-grid">
+            <!-- Inventory Summary Box -->
+            <div class="report-box">
+              <div class="report-box-header">
+                <h3>📦 Inventory Summary</h3>
+              </div>
+              <div class="report-box-content">
+                <div class="report-stats-compact">
+                  <div class="stat-item">
+                    <span class="stat-label">Total Parts:</span>
+                    <span class="stat-value" id="reportTotalParts">0</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Total Value:</span>
+                    <span class="stat-value" id="reportTotalValue">₱0</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Categories:</span>
+                    <span class="stat-value" id="reportCategories">0</span>
+                  </div>
+                </div>
+                <button
+                  class="btn btn-primary btn-sm"
+                  onclick="generateInventoryReport()"
+                >
+                  📄 Generate Report
+                </button>
+              </div>
+            </div>
+
+            <!-- Stock Level Summary Box -->
+            <div class="report-box">
+              <div class="report-box-header">
+                <h3>📊 Stock Levels</h3>
+              </div>
+              <div class="report-box-content">
+                <div class="stock-grid-compact">
+                  <!-- Top Row: In Stock, Low Stock -->
+                  <div
+                    class="stock-item-compact"
+                    onclick="showStockDetails('in')"
+                  >
+                    <div class="stock-count" id="inStockCount">0</div>
+                    <div class="stock-type">In Stock</div>
+                  </div>
+                  <div
+                    class="stock-item-compact"
+                    onclick="showStockDetails('low')"
+                  >
+                    <div class="stock-count" id="lowStockCount">0</div>
+                    <div class="stock-type">Low Stock</div>
+                  </div>
+                  <!-- Bottom Row: Out of Stock, Discontinued -->
+                  <div
+                    class="stock-item-compact"
+                    onclick="showStockDetails('out')"
+                  >
+                    <div class="stock-count" id="outStockCount">0</div>
+                    <div class="stock-type">Out of Stock</div>
+                  </div>
+                  <div
+                    class="stock-item-compact"
+                    onclick="showStockDetails('discontinued')"
+                  >
+                    <div class="stock-count" id="discontinuedCount">0</div>
+                    <div class="stock-type">Discontinued</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Order Summary Box -->
+            <div class="report-box">
+              <div class="report-box-header">
+                <h3>📋 Order Summary</h3>
+              </div>
+              <div class="report-box-content">
+                <div class="order-stats-compact">
+                  <div
+                    class="order-item-compact"
+                    onclick="showOrderDetails('pending')"
+                  >
+                    <span class="order-count" id="pendingOrdersCount">0</span>
+                    <span class="order-label">Pending</span>
+                  </div>
+                  <div
+                    class="order-item-compact"
+                    onclick="showOrderDetails('completed')"
+                  >
+                    <span class="order-count" id="completedOrdersCount">0</span>
+                    <span class="order-label">Completed</span>
+                  </div>
+                  <div
+                    class="order-item-compact"
+                    onclick="showOrderDetails('cancelled')"
+                  >
+                    <span class="order-count" id="cancelledOrdersCount">0</span>
+                    <span class="order-label">Cancelled</span>
+                  </div>
+                </div>
+                <div class="order-value-compact">
+                  <span>Total Value: </span>
+                  <span class="value-amount" id="completedOrdersValue">₱0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Analytics & Charts Box -->
+            <div class="report-box">
+              <div class="report-box-header">
+                <h3>📊 Analytics</h3>
+              </div>
+              <div class="report-box-content">
+                <div class="analytics-filters">
+                  <select id="monthFilter" class="filter-select-compact">
+                    <option value="0">January</option>
+                    <option value="1">February</option>
+                    <option value="2">March</option>
+                    <option value="3">April</option>
+                    <option value="4">May</option>
+                    <option value="5">June</option>
+                    <option value="6">July</option>
+                    <option value="7">August</option>
+                    <option value="8">September</option>
+                    <option value="9">October</option>
+                    <option value="10">November</option>
+                    <option value="11">December</option>
+                  </select>
+                  <select id="yearFilter" class="filter-select-compact">
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                  </select>
+                </div>
+                <div class="mini-chart" id="weeklyOrderChart"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions Row -->
+          <div class="report-actions-row">
+            <button class="btn btn-primary" onclick="generateInventoryReport()">
+              📦 Download Inventory Report
+            </button>
+            <button class="btn btn-success" onclick="generateOrderReport()">
+              📋 Download Order Report
+            </button>
+            <button
+              class="btn btn-warning"
+              onclick="generateStockAlertReport()"
+            >
+              ⚠️ Download Stock Alert Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add/Edit Part Modal -->
+    <div id="partModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="partModalTitle">Add New Part</h3>
+          <span class="close" onclick="closePartModal()">&times;</span>
+        </div>
+        <form id="partForm">
+          <div class="form-group">
+            <label for="partId">Part ID</label>
+            <input type="text" id="partId" required />
+          </div>
+          <div class="form-group">
+            <label for="partName">Part Name</label>
+            <input type="text" id="partName" required />
+          </div>
+          <div class="form-group">
+            <label for="partBrand">Brand</label>
+            <input type="text" id="partBrand" required />
+          </div>
+          <div class="form-group">
+            <label for="partCategory">Category</label>
+            <select id="partCategory" required>
+              <option value="">Select Category</option>
+              <option value="Processor (CPU)">Processor (CPU)</option>
+              <option value="Memory (RAM)">Memory (RAM)</option>
+              <option value="Graphic Card (GPU)">Graphic Card (GPU)</option>
+              <option value="Storage">Storage</option>
+              <option value="Motherboard">Motherboard</option>
+              <option value="Power Supply">Power Supply</option>
+              <option value="Cooling System">Cooling System</option>
+              <option value="Computer Case">Computer Case</option>
+              <option value="Peripheral">Peripheral</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="partPrice">Unit Price (₱)</label>
+            <input type="number" id="partPrice" step="0.01" min="0" required />
+          </div>
+          <div class="form-group">
+            <label for="partQuantity">Quantity</label>
+            <input type="number" id="partQuantity" min="0" required />
+          </div>
+          <div class="form-group">
+            <label for="partAlertThreshold">Alert Threshold</label>
+            <input type="number" id="partAlertThreshold" min="0" required />
+          </div>
+          <div class="form-group">
+            <label for="partStatus">Stock Level</label>
+            <select id="partStatus">
+              <option value="auto">Auto (Based on Quantity)</option>
+              <option value="Discontinued">Discontinued</option>
+            </select>
+          </div>
+        </form>
+        <div class="modal-footer">
+          <button type="submit" form="partForm" class="btn btn-primary">
+            Save Part
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closePartModal()"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add/Edit Order Modal -->
+    <div id="orderModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="orderModalTitle">Create New Order</h3>
+          <span class="close" onclick="closeOrderModal()">&times;</span>
+        </div>
+        <form id="orderForm">
+          <div class="form-group">
+            <label for="orderId">Order ID</label>
+            <input type="text" id="orderId" required />
+          </div>
+          <div class="form-group">
+            <label for="orderPart">Part</label>
+            <select id="orderPart" required>
+              <option value="">Select Part</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="orderDate">Date</label>
+            <input type="date" id="orderDate" required />
+          </div>
+          <div class="form-group">
+            <label for="orderQuantity">Quantity</label>
+            <input type="number" id="orderQuantity" min="1" required />
+          </div>
+          <div class="form-group">
+            <label for="orderStatus">Status</label>
+            <select id="orderStatus" required>
+              <option value="Pending">Pending</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </form>
+        <div class="modal-footer">
+          <button type="submit" form="orderForm" class="btn btn-primary">
+            Save Order
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeOrderModal()"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Low Stock Alert Modal -->
+    <div id="lowStockModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🚨 Low Stock Alert</h3>
+          <span class="close" onclick="closeLowStockModal()">&times;</span>
+        </div>
+        <div class="alert-content">
+          <div id="lowStockList"></div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeLowStockModal()"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Modal for Reports -->
+    <div id="detailsModal" class="modal">
+      <div class="modal-content details-modal">
+        <div class="modal-header">
+          <h3 id="detailsModalTitle">Details</h3>
+          <span class="close" onclick="closeDetailsModal()">&times;</span>
+        </div>
+        <div class="details-content">
+          <div id="detailsTableContainer"></div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeDetailsModal()"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="confirmTitle">Confirm Action</h3>
+          <span class="close" onclick="closeConfirmModal()">&times;</span>
+        </div>
+        <div class="confirm-content">
+          <p id="confirmMessage">Are you sure?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" id="confirmYes">
+            Yes
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeConfirmModal()"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
