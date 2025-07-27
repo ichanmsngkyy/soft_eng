@@ -4,6 +4,8 @@ let orders = [];
 let activityHistory = [];
 let currentEditPartId = null;
 let currentEditOrderId = null;
+let currentOrderStatusFilter = ''; // Add this for the new filter system
+let currentOrderCategories = []; // Store categories for current order being created
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,6 +19,11 @@ function initializeApp() {
     setupNavigation();
     setupEventListeners();
     setupToastContainer();
+    setupCategoryFormListener();
+    
+    // Initialize the new order category system
+    initializeOrderCategorySystem();
+    
     loadSampleData();
     updateDashboard();
     
@@ -24,6 +31,68 @@ function initializeApp() {
     setTimeout(() => {
         checkLowStockNotifications();
     }, 2000); // Delay to ensure everything is loaded
+}
+
+function setupCategoryFormListener() {
+    const categoryForm = document.getElementById('categoryForm');
+    if (categoryForm) {
+        categoryForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const categorySelect = document.getElementById('categorySelect').value;
+            const partId = document.getElementById('categoryPart').value;
+            const quantity = parseInt(document.getElementById('categoryQuantity').value);
+            
+            // Validation
+            if (!categorySelect) {
+                showToast('Please select a category first', 'error');
+                return;
+            }
+            
+            if (!partId) {
+                showToast('Please select a part', 'error');
+                return;
+            }
+            
+            if (isNaN(quantity) || quantity <= 0) {
+                showToast('Please enter a valid quantity', 'error');
+                return;
+            }
+            
+            // Find the part
+            const part = inventory.find(p => p.partId === partId);
+            if (!part) {
+                showToast('Selected part not found', 'error');
+                return;
+            }
+            
+            // Check if order quantity exceeds available inventory
+            if (quantity > part.quantity) {
+                showToast(`Cannot add: Requested quantity (${quantity}) exceeds available stock (${part.quantity})`, 'error');
+                return;
+            }
+            
+            // Check if part is already added
+            const existingCategory = currentOrderCategories.find(cat => cat.partId === partId);
+            if (existingCategory) {
+                showToast('This part is already added to the order', 'error');
+                return;
+            }
+            
+            // Add category
+            currentOrderCategories.push({
+                partId: partId,
+                partName: part.name,
+                category: categorySelect,
+                quantity: quantity,
+                price: part.price
+            });
+            
+            updateCategoriesList();
+            closeCategoryModal();
+            showToast('Category added successfully!', 'success');
+        });
+    }
 }
 
 // Setup toast container
@@ -94,7 +163,6 @@ function refreshPageData(page) {
             break;
         case 'orders':
             displayOrdersTable();
-            populatePartSelect();
             break;
         case 'activity':
             displayActivityHistory();
@@ -112,7 +180,6 @@ function setupEventListeners() {
     const categoryFilter = document.getElementById('categoryFilter');
     const statusFilter = document.getElementById('statusFilter');
     const orderSearchInput = document.getElementById('orderSearchInput');
-    const orderStatusFilter = document.getElementById('orderStatusFilter');
     const orderDateFilter = document.getElementById('orderDateFilter');
     const activityDateFrom = document.getElementById('activityDateFrom');
     const activityDateTo = document.getElementById('activityDateTo');
@@ -134,10 +201,6 @@ function setupEventListeners() {
         orderSearchInput.addEventListener('input', displayOrdersTable);
     }
     
-    if (orderStatusFilter) {
-        orderStatusFilter.addEventListener('change', displayOrdersTable);
-    }
-    
     if (orderDateFilter) {
         orderDateFilter.addEventListener('change', displayOrdersTable);
     }
@@ -152,31 +215,6 @@ function setupEventListeners() {
     
     if (actionTypeFilter) {
         actionTypeFilter.addEventListener('change', displayActivityHistory);
-    }
-    
-    // Real-time stock validation for orders
-    const orderQuantityInput = document.getElementById('orderQuantity');
-    const orderPartSelect = document.getElementById('orderPart');
-    
-    if (orderQuantityInput && orderPartSelect) {
-        function validateOrderQuantity() {
-            const selectedPartId = orderPartSelect.value;
-            const enteredQuantity = parseInt(orderQuantityInput.value);
-            
-            if (selectedPartId && !isNaN(enteredQuantity)) {
-                const selectedPart = inventory.find(p => p.partId === selectedPartId);
-                if (selectedPart && enteredQuantity > selectedPart.quantity) {
-                    orderQuantityInput.style.borderColor = '#e74c3c';
-                    orderQuantityInput.style.backgroundColor = '#fadbd8';
-                } else {
-                    orderQuantityInput.style.borderColor = '#e0e6ed';
-                    orderQuantityInput.style.backgroundColor = 'white';
-                }
-            }
-        }
-        
-        orderQuantityInput.addEventListener('input', validateOrderQuantity);
-        orderPartSelect.addEventListener('change', validateOrderQuantity);
     }
     
     // Report filters
@@ -204,13 +242,20 @@ function setupEventListeners() {
     
     // Modal close events
     window.addEventListener('click', function(event) {
-        const modals = ['partModal', 'orderModal', 'lowStockModal', 'confirmModal', 'detailsModal'];
+        const modals = ['partModal', 'orderModal', 'categoryModal', 'lowStockModal', 'confirmModal', 'detailsModal'];
         modals.forEach(modalId => {
             const modal = document.getElementById(modalId);
             if (event.target === modal) {
                 modal.style.display = 'none';
             }
         });
+    });
+    
+    // Auto-generate Part ID when category changes
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'partCategory' && !currentEditPartId) {
+            document.getElementById('partId').value = generatePartId();
+        }
     });
 }
 
@@ -239,7 +284,7 @@ function loadSampleData() {
             name: 'Intel Core i9-13900K',
             brand: 'Intel',
             category: 'Processor (CPU)',
-            price: 32999.00,
+            price: 33000,
             quantity: 25,
             alertThreshold: 5,
             status: 'auto'
@@ -250,7 +295,7 @@ function loadSampleData() {
             name: 'NVIDIA RTX 4080',
             brand: 'NVIDIA',
             category: 'Graphic Card (GPU)',
-            price: 67999.00,
+            price: 68000,
             quantity: 3,
             alertThreshold: 5,
             status: 'auto'
@@ -261,7 +306,7 @@ function loadSampleData() {
             name: 'Corsair Vengeance LPX 32GB',
             brand: 'Corsair',
             category: 'Memory (RAM)',
-            price: 7299.00,
+            price: 7300,
             quantity: 0,
             alertThreshold: 10,
             status: 'auto'
@@ -272,7 +317,7 @@ function loadSampleData() {
             name: 'Samsung 980 PRO 1TB',
             brand: 'Samsung',
             category: 'Storage',
-            price: 8499.00,
+            price: 8500,
             quantity: 30,
             alertThreshold: 8,
             status: 'auto'
@@ -283,7 +328,7 @@ function loadSampleData() {
             name: 'ASUS ROG Strix X670E',
             brand: 'ASUS',
             category: 'Motherboard',
-            price: 25499.00,
+            price: 25500,
             quantity: 15,
             alertThreshold: 5,
             status: 'auto'
@@ -294,7 +339,7 @@ function loadSampleData() {
             name: 'Corsair RM850x',
             brand: 'Corsair',
             category: 'Power Supply',
-            price: 10199.00,
+            price: 10200,
             quantity: 5,
             alertThreshold: 5,
             status: 'auto'
@@ -305,7 +350,7 @@ function loadSampleData() {
             name: 'Noctua NH-D15',
             brand: 'Noctua',
             category: 'Cooling System',
-            price: 5699.00,
+            price: 5700,
             quantity: 22,
             alertThreshold: 5,
             status: 'auto'
@@ -316,7 +361,7 @@ function loadSampleData() {
             name: 'Fractal Design Define 7',
             brand: 'Fractal Design',
             category: 'Computer Case',
-            price: 9599.00,
+            price: 9600,
             quantity: 12,
             alertThreshold: 3,
             status: 'auto'
@@ -327,7 +372,7 @@ function loadSampleData() {
             name: 'Logitech MX Master 3',
             brand: 'Logitech',
             category: 'Peripheral',
-            price: 4999.00,
+            price: 5000,
             quantity: 8,
             alertThreshold: 5,
             status: 'Discontinued'
@@ -433,6 +478,239 @@ function logActivity(partName, partId, actionType, details) {
     });
 }
 
+// Enhanced Category Management Functions
+
+// Toggle the inline category form
+function toggleCategoryForm() {
+    const formContainer = document.getElementById('categoryFormContainer');
+    const button = event.target;
+    
+    if (formContainer.style.display === 'none' || formContainer.style.display === '') {
+        formContainer.style.display = 'block';
+        button.textContent = 'HIDE FORM';
+        button.style.background = '#95a5a6';
+    } else {
+        formContainer.style.display = 'none';
+        button.textContent = 'ADD CATEGORY';
+        button.style.background = '#2c3e50';
+        
+        // Reset form when hiding
+        document.getElementById('inlineCategorySelect').value = '';
+        document.getElementById('inlineCategoryPart').innerHTML = '<option value="">Select Category First</option>';
+        document.getElementById('inlineCategoryPart').disabled = true;
+        document.getElementById('inlineCategoryQuantity').value = '';
+    }
+}
+
+// Initialize the enhanced functionality
+function initializeOrderCategorySystem() {
+    setupInlineCategoryListener();
+    
+    // Hide the category form initially
+    const formContainer = document.getElementById('categoryFormContainer');
+    if (formContainer) {
+        formContainer.style.display = 'none';
+    }
+}
+
+// Populate parts when category is selected in inline form
+function setupInlineCategoryListener() {
+    const categorySelect = document.getElementById('inlineCategorySelect');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function() {
+            populateInlinePartsForCategory(this.value);
+        });
+    }
+}
+
+function populateInlinePartsForCategory(selectedCategory) {
+    const partSelect = document.getElementById('inlineCategoryPart');
+    
+    if (!selectedCategory) {
+        partSelect.innerHTML = '<option value="">Select Category First</option>';
+        partSelect.disabled = true;
+        return;
+    }
+    
+    // Filter parts by selected category that have stock
+    const categoryParts = inventory.filter(part => 
+        part.category === selectedCategory && part.quantity > 0
+    );
+    
+    partSelect.innerHTML = '<option value="">Select Part</option>';
+    partSelect.disabled = false;
+    
+    categoryParts.forEach(part => {
+        const option = document.createElement('option');
+        option.value = part.partId;
+        option.textContent = `${part.name} (Stock: ${part.quantity})`;
+        partSelect.appendChild(option);
+    });
+    
+    if (categoryParts.length === 0) {
+        partSelect.innerHTML = '<option value="">No parts available in this category</option>';
+        partSelect.disabled = true;
+    }
+}
+
+// Add category from inline form
+function addInlineCategory() {
+    const categorySelect = document.getElementById('inlineCategorySelect').value;
+    const partId = document.getElementById('inlineCategoryPart').value;
+    const quantity = parseInt(document.getElementById('inlineCategoryQuantity').value);
+    
+    // Validation
+    if (!categorySelect) {
+        showToast('Please select a category first', 'error');
+        return;
+    }
+    
+    if (!partId) {
+        showToast('Please select a part', 'error');
+        return;
+    }
+    
+    if (isNaN(quantity) || quantity <= 0) {
+        showToast('Please enter a valid quantity', 'error');
+        return;
+    }
+    
+    // Find the part
+    const part = inventory.find(p => p.partId === partId);
+    if (!part) {
+        showToast('Selected part not found', 'error');
+        return;
+    }
+    
+    // Check if order quantity exceeds available inventory
+    if (quantity > part.quantity) {
+        showToast(`Cannot add: Requested quantity (${quantity}) exceeds available stock (${part.quantity})`, 'error');
+        return;
+    }
+    
+    // Check if part is already added
+    const existingCategoryIndex = currentOrderCategories.findIndex(cat => cat.partId === partId);
+    if (existingCategoryIndex !== -1) {
+        showToast('This part is already added to the order', 'error');
+        return;
+    }
+    
+    // Add category
+    currentOrderCategories.push({
+        id: generateId(), // Add unique ID for editing
+        partId: partId,
+        partName: part.name,
+        category: categorySelect,
+        quantity: quantity,
+        price: part.price,
+        maxStock: part.quantity
+    });
+    
+    updateCategoriesList();
+    
+    // Reset form
+    document.getElementById('inlineCategorySelect').value = '';
+    document.getElementById('inlineCategoryPart').innerHTML = '<option value="">Select Category First</option>';
+    document.getElementById('inlineCategoryPart').disabled = true;
+    document.getElementById('inlineCategoryQuantity').value = '';
+    
+    showToast('Category added successfully!', 'success');
+}
+
+// Enhanced updateCategoriesList function with edit capabilities
+function updateCategoriesList() {
+    const container = document.getElementById('orderCategoriesList');
+    
+    if (currentOrderCategories.length === 0) {
+        container.innerHTML = '<div class="no-categories">No parts added yet.</div>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    currentOrderCategories.forEach((category, index) => {
+        const categoryItem = document.createElement('div');
+        categoryItem.className = 'category-item';
+        categoryItem.style.marginBottom = '15px';
+        
+        categoryItem.innerHTML = `
+            <div class="category-item-content" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: white; border: 1px solid #e0e6ed; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div class="category-info" style="flex: 1;">
+                    <div class="category-item-info" style="display: flex; align-items: center; gap: 15px;">
+                        <div class="category-icon" style="font-size: 1.5rem; color: #3498db;">📦</div>
+                        <div class="category-details">
+                            <h4 style="margin: 0; color: #2c3e50; font-weight: 600; font-size: 1rem;">${category.partName}</h4>
+                            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.9rem;">
+                                <span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 10px; font-size: 0.8rem; margin-right: 10px;">${category.category}</span>
+                                Part ID: ${category.partId} | Max Stock: ${category.maxStock}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="category-actions" style="display: flex; align-items: center; gap: 15px;">
+                    <div class="quantity-controls" style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 0.9rem; color: #7f8c8d; font-weight: 600;">Qty:</label>
+                        <select id="quantity-${category.id}" style="padding: 6px 10px; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 0.9rem; min-width: 80px;" onchange="updateCategoryQuantity('${category.id}', this.value)">
+                            ${generateQuantityOptions(category.maxStock, category.quantity)}
+                        </select>
+                    </div>
+                    <button class="category-remove" onclick="removeCategory(${index})" title="Remove" style="background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 8px 12px; font-size: 1rem; cursor: pointer; transition: background 0.3s ease;">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(categoryItem);
+    });
+}
+
+// Generate quantity options for dropdown
+function generateQuantityOptions(maxStock, currentQuantity) {
+    let options = '';
+    for (let i = 1; i <= Math.min(maxStock, 50); i++) { // Limit to 50 for performance
+        const selected = i === currentQuantity ? 'selected' : '';
+        options += `<option value="${i}" ${selected}>${i}</option>`;
+    }
+    return options;
+}
+
+// Update category quantity
+function updateCategoryQuantity(categoryId, newQuantity) {
+    const quantity = parseInt(newQuantity);
+    const categoryIndex = currentOrderCategories.findIndex(cat => cat.id === categoryId);
+    
+    if (categoryIndex !== -1) {
+        const category = currentOrderCategories[categoryIndex];
+        
+        // Validation
+        if (quantity > category.maxStock) {
+            showToast(`Quantity cannot exceed available stock (${category.maxStock})`, 'error');
+            // Reset to previous value
+            document.getElementById(`quantity-${categoryId}`).value = category.quantity;
+            return;
+        }
+        
+        if (quantity <= 0) {
+            showToast('Quantity must be greater than 0', 'error');
+            document.getElementById(`quantity-${categoryId}`).value = category.quantity;
+            return;
+        }
+        
+        // Update quantity
+        currentOrderCategories[categoryIndex].quantity = quantity;
+        showToast(`Quantity updated to ${quantity}`, 'success');
+    }
+}
+
+// Enhanced removeCategory function
+function removeCategory(index) {
+    if (index >= 0 && index < currentOrderCategories.length) {
+        const category = currentOrderCategories[index];
+        currentOrderCategories.splice(index, 1);
+        updateCategoriesList();
+        showToast(`${category.partName} removed from order`, 'info');
+    }
+}
+
 // Dashboard Functions
 function updateDashboard() {
     const totalParts = inventory.reduce((sum, part) => sum + part.quantity, 0);
@@ -444,7 +722,7 @@ function updateDashboard() {
     const pendingOrders = orders.filter(order => order.status === 'Pending').length;
 
     document.getElementById('totalParts').textContent = totalParts.toLocaleString();
-    document.getElementById('totalValue').textContent = `₱${totalValue.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+    document.getElementById('totalValue').textContent = `₱${totalValue.toLocaleString('en-PH')}`;
     document.getElementById('lowStockItems').textContent = lowStockItems;
     document.getElementById('pendingOrders').textContent = pendingOrders;
     
@@ -522,8 +800,11 @@ function renderStockChart() {
     legendItems.forEach((item, index) => {
         const spans = item.querySelectorAll('span');
         if (spans.length > 1) {
-            const status = spans[1].textContent;
-            spans[1].textContent = `${status} (${stockData[status] || 0})`;
+            const statusNames = ['In Stock', 'Low Stock', 'Out of Stock', 'Discontinued'];
+            const status = statusNames[index];
+            if (status) {
+                spans[1].textContent = `${status} (${stockData[status] || 0})`;
+            }
         }
     });
 }
@@ -564,8 +845,14 @@ function displayInventoryTable() {
     filteredInventory.forEach(part => {
         const stockLevel = getStockLevel(part);
         const statusClass = stockLevel.toLowerCase().replace(/\s+/g, '-');
+        const isOutOfStock = stockLevel === 'Out of Stock';
 
         const row = document.createElement('tr');
+        if (isOutOfStock) {
+            row.style.opacity = '0.6';
+            row.style.background = '#f8f9fa';
+        }
+        
         row.innerHTML = `
             <td><strong>${part.partId}</strong></td>
             <td>
@@ -573,7 +860,7 @@ function displayInventoryTable() {
             </td>
             <td>${part.brand}</td>
             <td><span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">${part.category}</span></td>
-            <td style="font-weight: 600; color: #27ae60;">₱${parseFloat(part.price).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+            <td style="font-weight: 600; color: #27ae60;">₱${parseInt(part.price).toLocaleString('en-PH')}</td>
             <td style="font-weight: 600; font-size: 1.1rem;">${part.quantity}</td>
             <td>${part.alertThreshold}</td>
             <td><span class="status-badge status-${statusClass}">${stockLevel}</span></td>
@@ -732,33 +1019,28 @@ function deletePart(id) {
     }
 }
 
-// Auto-generate Part ID when category changes
-document.addEventListener('change', function(e) {
-    if (e.target.id === 'partCategory' && !currentEditPartId) {
-        document.getElementById('partId').value = generatePartId();
-    }
-});
-
 // Order Management Functions
 function displayOrdersTable() {
     const tableBody = document.getElementById('ordersTableBody');
     const searchTerm = document.getElementById('orderSearchInput')?.value.toLowerCase() || '';
-    const statusFilter = document.getElementById('orderStatusFilter')?.value || '';
     const dateFilter = document.getElementById('orderDateFilter')?.value || '';
     
     let filteredOrders = orders.filter(order => {
         const matchesSearch = order.orderId.toLowerCase().includes(searchTerm) ||
                             order.partName.toLowerCase().includes(searchTerm);
-        const matchesStatus = !statusFilter || order.status === statusFilter;
+        const matchesStatus = !currentOrderStatusFilter || order.status === currentOrderStatusFilter;
         const matchesDate = !dateFilter || order.date === dateFilter;
         
         return matchesSearch && matchesStatus && matchesDate;
     });
     
-    // Sort orders: Pending first, then by date (newest first)
+    // Sort orders: Pending first, then Completed/Cancelled by date (newest first)
     filteredOrders.sort((a, b) => {
+        // Pending orders first
         if (a.status === 'Pending' && b.status !== 'Pending') return -1;
         if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+        
+        // Within same status group, sort by date (newest first)
         return new Date(b.date) - new Date(a.date);
     });
 
@@ -779,6 +1061,7 @@ function displayOrdersTable() {
 
     filteredOrders.forEach(order => {
         const statusClass = order.status.toLowerCase();
+        const isCompleted = order.status === 'Completed' || order.status === 'Cancelled';
         const formattedDate = new Date(order.date).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
@@ -786,6 +1069,13 @@ function displayOrdersTable() {
         });
 
         const row = document.createElement('tr');
+        
+        // Apply grayscale to completed/cancelled orders
+        if (isCompleted) {
+            row.style.filter = 'grayscale(100%)';
+            row.style.opacity = '0.7';
+        }
+        
         row.innerHTML = `
             <td><strong>${order.orderId}</strong></td>
             <td>${order.partName}</td>
@@ -807,18 +1097,50 @@ function displayOrdersTable() {
     });
 }
 
+function filterOrdersByStatus(status) {
+    currentOrderStatusFilter = status;
+    
+    // Update active button
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    displayOrdersTable();
+}
+
 function openAddOrderModal() {
     currentEditOrderId = null;
-    document.getElementById('orderModalTitle').textContent = 'Create New Order';
+    currentOrderCategories = [];
+    document.getElementById('orderModalTitle').textContent = 'CREATE ORDER';
     document.getElementById('orderForm').reset();
     
     // Set default values
     document.getElementById('orderId').value = generateOrderId();
     document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('orderStatus').value = 'Pending';
     
-    populatePartSelect();
+    // Hide status field for new orders (always defaults to Pending)
+    const statusGroup = document.getElementById('orderStatusGroup');
+    if (statusGroup) {
+        statusGroup.style.display = 'none';
+    }
+    
+    // Clear categories list and hide category form
+    updateCategoriesList();
+    const formContainer = document.getElementById('categoryFormContainer');
+    if (formContainer) {
+        formContainer.style.display = 'none';
+    }
+    
+    // Reset ADD CATEGORY button
+    const addCategoryBtn = document.querySelector('.btn-category');
+    if (addCategoryBtn) {
+        addCategoryBtn.textContent = 'ADD CATEGORY';
+        addCategoryBtn.style.background = '#2c3e50';
+    }
+    
     document.getElementById('orderModal').style.display = 'block';
+    
+    // Initialize category system for this modal instance
+    initializeOrderCategorySystem();
 }
 
 function editOrder(id) {
@@ -833,14 +1155,26 @@ function editOrder(id) {
     document.getElementById('orderModalTitle').textContent = 'Edit Order';
     document.getElementById('orderId').value = order.orderId;
     document.getElementById('orderDate').value = order.date;
-    document.getElementById('orderQuantity').value = order.quantity;
     document.getElementById('orderStatus').value = order.status;
     
-    populatePartSelect();
-    // Set the selected part after populating
-    setTimeout(() => {
-        document.getElementById('orderPart').value = order.partId;
-    }, 100);
+    // Show status field for editing existing orders
+    const statusGroup = document.getElementById('orderStatusGroup');
+    statusGroup.style.display = 'block';
+    
+    // Set up the category with the existing order data
+    const part = inventory.find(p => p.partId === order.partId);
+    if (part) {
+        currentOrderCategories = [{
+            id: generateId(),
+            partId: order.partId,
+            partName: order.partName,
+            category: part.category,
+            quantity: order.quantity,
+            price: part.price,
+            maxStock: part.quantity + order.quantity // Add current order quantity to available stock
+        }];
+        updateCategoriesList();
+    }
     
     document.getElementById('orderModal').style.display = 'block';
 }
@@ -848,32 +1182,25 @@ function editOrder(id) {
 function closeOrderModal() {
     document.getElementById('orderModal').style.display = 'none';
     currentEditOrderId = null;
+    currentOrderCategories = [];
 }
 
-function populatePartSelect() {
-    const partSelect = document.getElementById('orderPart');
-    partSelect.innerHTML = '<option value="">Select Part</option>';
-    
-    inventory.forEach(part => {
-        const option = document.createElement('option');
-        option.value = part.partId;
-        option.textContent = `${part.partId} - ${part.name} (Stock: ${part.quantity})`;
-        partSelect.appendChild(option);
-    });
-}
-
+// Enhanced handleOrderFormSubmit to handle multiple categories
 function handleOrderFormSubmit(e) {
     e.preventDefault();
     
     const orderId = document.getElementById('orderId').value.trim();
-    const partId = document.getElementById('orderPart').value;
     const date = document.getElementById('orderDate').value;
-    const quantity = parseInt(document.getElementById('orderQuantity').value);
-    const status = document.getElementById('orderStatus').value;
+    const status = currentEditOrderId ? document.getElementById('orderStatus').value : 'Pending';
     
     // Validation
-    if (!orderId || !partId || !date || isNaN(quantity) || quantity <= 0) {
+    if (!orderId || !date) {
         showToast('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    if (currentOrderCategories.length === 0) {
+        showToast('Please add at least one category to the order', 'error');
         return;
     }
     
@@ -884,46 +1211,28 @@ function handleOrderFormSubmit(e) {
         return;
     }
     
-    // Find the part
-    const part = inventory.find(p => p.partId === partId);
-    if (!part) {
-        showToast('Selected part not found', 'error');
-        return;
-    }
-    
-    // Check if order quantity exceeds available inventory
-    if (quantity > part.quantity) {
-        showToast(`Cannot create order: Requested quantity (${quantity}) exceeds available stock (${part.quantity})`, 'error');
-        return;
-    }
-    
-    const orderData = {
-        orderId,
-        partId,
-        partName: part.name,
-        date,
-        quantity,
-        status
-    };
-    
-    if (currentEditOrderId) {
-        // Update existing order
+    // For editing, handle single category
+    if (currentEditOrderId && currentOrderCategories.length === 1) {
+        const category = currentOrderCategories[0];
+        const part = inventory.find(p => p.partId === category.partId);
+        
+        if (!part) {
+            showToast(`Part ${category.partName} not found`, 'error');
+            return;
+        }
+        
+        const orderData = {
+            orderId: orderId,
+            partId: category.partId,
+            partName: category.partName,
+            date: date,
+            quantity: category.quantity,
+            status: status
+        };
+        
         const orderIndex = orders.findIndex(o => o.id === currentEditOrderId);
         if (orderIndex !== -1) {
             const oldOrder = orders[orderIndex];
-            
-            // For updates, check if new quantity is valid
-            // Calculate available stock considering the old order
-            let availableStock = part.quantity;
-            if (oldOrder.status === 'Completed') {
-                availableStock += oldOrder.quantity; // Add back the old order quantity
-            }
-            
-            if (quantity > availableStock) {
-                showToast(`Cannot update order: Requested quantity (${quantity}) exceeds available stock (${availableStock})`, 'error');
-                return;
-            }
-            
             orders[orderIndex] = { ...orders[orderIndex], ...orderData };
             
             // Handle inventory updates based on status changes
@@ -933,30 +1242,58 @@ function handleOrderFormSubmit(e) {
             showToast('Order updated successfully!', 'success');
         }
     } else {
-        // Add new order
-        const newOrder = {
-            id: generateId(),
-            ...orderData
-        };
+        // Create orders for each category (new orders)
+        const newOrders = [];
+        let hasError = false;
         
-        orders.push(newOrder);
+        currentOrderCategories.forEach((category, index) => {
+            const part = inventory.find(p => p.partId === category.partId);
+            if (!part) {
+                showToast(`Part ${category.partName} not found`, 'error');
+                hasError = true;
+                return;
+            }
+            
+            // Check stock availability
+            if (category.quantity > part.quantity) {
+                showToast(`Insufficient stock for ${category.partName}. Available: ${part.quantity}, Requested: ${category.quantity}`, 'error');
+                hasError = true;
+                return;
+            }
+            
+            const orderData = {
+                id: generateId(),
+                orderId: currentOrderCategories.length > 1 ? `${orderId}-${index + 1}` : orderId,
+                partId: category.partId,
+                partName: category.partName,
+                date: date,
+                quantity: category.quantity,
+                status: status
+            };
+            
+            newOrders.push(orderData);
+        });
         
-        // Only deduct inventory if the new order is marked as "Completed"
-        if (status === 'Completed') {
-            part.quantity -= quantity;
-            logActivity(part.name, part.partId, 'Order Impact', `Deducted ${quantity} units for completed order ${orderId}`);
+        if (hasError) {
+            return;
         }
         
-        logActivity(part.name, part.partId, 'Order Impact', `Created order ${orderId} for ${quantity} units (Status: ${status})`);
-        showToast('Order created successfully!', 'success');
+        // Add all orders
+        newOrders.forEach(orderData => {
+            orders.push(orderData);
+            
+            const part = inventory.find(p => p.partId === orderData.partId);
+            logActivity(orderData.partName, orderData.partId, 'Order Impact', 
+                `Created order ${orderData.orderId} for ${orderData.quantity} units (Status: ${orderData.status})`);
+        });
+        
+        showToast(`Order ${orderId} created successfully with ${newOrders.length} items!`, 'success');
     }
     
     closeOrderModal();
     displayOrdersTable();
     displayInventoryTable();
     updateDashboard();
-    
-    // Check for low stock notifications
     triggerStockNotification();
 }
 
@@ -1072,8 +1409,7 @@ function displayActivityHistory() {
             'Addition': '➕',
             'Update': '✏️',
             'Order Impact': '📦',
-            'Deletion': '🗑️',
-            'Adjustment': '⚖️'
+            'Deletion': '🗑️'
         };
 
         const row = document.createElement('tr');
@@ -1105,6 +1441,81 @@ function updateReports() {
     updateStockLevelReports();
     updateOrderReports();
     updateWeeklyOrderChart();
+    renderReportsAnalytics();
+}
+
+function renderReportsAnalytics() {
+    // Render category chart for reports page
+    renderReportsCategoryChart();
+    renderReportsStockChart();
+}
+
+function renderReportsCategoryChart() {
+    const categoryData = {};
+    inventory.forEach(part => {
+        categoryData[part.category] = (categoryData[part.category] || 0) + part.quantity;
+    });
+
+    const chartContainer = document.getElementById('reportsCategoryChart');
+    if (!chartContainer) return;
+    
+    chartContainer.innerHTML = '';
+
+    if (Object.keys(categoryData).length === 0) {
+        chartContainer.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No data available</p>';
+        return;
+    }
+
+    const maxValue = Math.max(...Object.values(categoryData));
+    
+    Object.entries(categoryData).forEach(([category, count]) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = `${(count / maxValue) * 160}px`;
+        
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.textContent = category.split(' ')[0];
+        
+        const value = document.createElement('div');
+        value.className = 'bar-value';
+        value.textContent = count;
+        
+        bar.appendChild(label);
+        bar.appendChild(value);
+        chartContainer.appendChild(bar);
+    });
+}
+
+function renderReportsStockChart() {
+    const stockData = {
+        'In Stock': 0,
+        'Low Stock': 0,
+        'Out of Stock': 0,
+        'Discontinued': 0
+    };
+    
+    inventory.forEach(part => {
+        const stockLevel = getStockLevel(part);
+        stockData[stockLevel]++;
+    });
+    
+    // Update legend with counts for reports page
+    const legend = document.getElementById('reportsStockChart');
+    if (!legend) return;
+    
+    const legendItems = legend.querySelectorAll('.legend-item');
+    
+    legendItems.forEach((item, index) => {
+        const spans = item.querySelectorAll('span');
+        if (spans.length > 1) {
+            const statusNames = ['In Stock', 'Low Stock', 'Out of Stock', 'Discontinued'];
+            const status = statusNames[index];
+            if (status) {
+                spans[1].textContent = `${status} (${stockData[status] || 0})`;
+            }
+        }
+    });
 }
 
 function updateInventoryReports() {
@@ -1113,7 +1524,7 @@ function updateInventoryReports() {
     const categories = [...new Set(inventory.map(part => part.category))].length;
 
     document.getElementById('reportTotalParts').textContent = totalParts.toLocaleString();
-    document.getElementById('reportTotalValue').textContent = `₱${totalValue.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+    document.getElementById('reportTotalValue').textContent = `₱${totalValue.toLocaleString('en-PH')}`;
     document.getElementById('reportCategories').textContent = categories;
 }
 
@@ -1178,7 +1589,7 @@ function updateOrderReports() {
     
     document.getElementById('pendingOrdersCount').textContent = orderCounts.pending;
     document.getElementById('completedOrdersCount').textContent = orderCounts.completed;
-    document.getElementById('completedOrdersValue').textContent = `₱${completedOrdersValue.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+    document.getElementById('completedOrdersValue').textContent = `₱${completedOrdersValue.toLocaleString('en-PH')}`;
     document.getElementById('cancelledOrdersCount').textContent = orderCounts.cancelled;
 }
 
@@ -1317,7 +1728,7 @@ function showStockDetails(type) {
                         <td><span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">${part.category}</span></td>
                         <td style="font-weight: 600; color: ${part.quantity === 0 ? '#e74c3c' : '#f39c12'};">${part.quantity}</td>
                         <td>${type === 'discontinued' ? 'N/A' : part.alertThreshold}</td>
-                        <td style="font-weight: 600; color: #27ae60;">₱${parseFloat(part.price).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                        <td style="font-weight: 600; color: #27ae60;">₱${parseInt(part.price).toLocaleString('en-PH')}</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -1395,8 +1806,8 @@ function showOrderDetails(status) {
                             <td>${order.partName}</td>
                             <td>${formattedDate}</td>
                             <td style="font-weight: 600;">${order.quantity}</td>
-                            <td style="font-weight: 600; color: #27ae60;">₱${unitPrice.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
-                            <td style="font-weight: 600; color: #27ae60;">₱${totalValue.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                            <td style="font-weight: 600; color: #27ae60;">₱${unitPrice.toLocaleString('en-PH')}</td>
+                            <td style="font-weight: 600; color: #27ae60;">₱${totalValue.toLocaleString('en-PH')}</td>
                             <td><span class="status-badge status-${status}">${order.status}</span></td>
                         </tr>
                     `;
@@ -1466,7 +1877,7 @@ function generateInventoryReport() {
     
     report += 'SUMMARY:\n';
     report += `Total Parts: ${inventory.reduce((sum, part) => sum + part.quantity, 0)}\n`;
-    report += `Total Value: ₱${inventory.reduce((sum, part) => sum + (part.price * part.quantity), 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}\n`;
+    report += `Total Value: ₱${inventory.reduce((sum, part) => sum + (part.price * part.quantity), 0).toLocaleString('en-PH')}\n`;
     report += `Low Stock Items: ${inventory.filter(part => getStockLevel(part) === 'Low Stock').length}\n`;
     report += `Out of Stock Items: ${inventory.filter(part => getStockLevel(part) === 'Out of Stock').length}\n\n`;
     
