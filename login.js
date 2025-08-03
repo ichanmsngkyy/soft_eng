@@ -28,12 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSavedCredentials();
 });
 
-// Demo credentials - Replace with backend API call in production
-const validCredentials = {
-    username: 'admin',
-    password: 'admin123'
-};
-
 // Main login handler
 function handleLogin(e) {
     e.preventDefault();
@@ -48,39 +42,26 @@ function handleLogin(e) {
         return;
     }
     
-    // Show loading state
     setLoadingState(true);
-    
-    // Simulate API call delay - Replace with actual API call in production
-    setTimeout(() => {
-        authenticateUser(username, password, rememberMe);
-    }, 1000);
+    authenticateUser(username, password, rememberMe);
 }
 
-// Authentication function - Replace with backend API in production
-function authenticateUser(username, password, rememberMe) {
-    // TODO: Replace this with actual backend API call
-    // Example:
-    // fetch('/api/login', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({ username, password })
-    // })
-    // .then(response => response.json())
-    // .then(data => {
-    //     if (data.success) {
-    //         handleLoginSuccess(data.user, data.token, rememberMe);
-    //     } else {
-    //         handleLoginError(data.message);
-    //     }
-    // })
-    // .catch(error => handleLoginError('Network error'));
-    
-    // Demo authentication
-    if (username === validCredentials.username && password === validCredentials.password) {
-        handleLoginSuccess({ username: username }, 'demo-token-123', rememberMe);
-    } else {
-        handleLoginError('Invalid username or password');
+async function authenticateUser(username, password, rememberMe) {
+    try {
+        const response = await fetch('http://localhost:4567/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        if (response.ok) {
+            const data = await response.json();
+            handleLoginSuccess(data.user, data.token, rememberMe);
+        } else {
+            const err = await response.json();
+            handleLoginError(err.error || 'Invalid username or password');
+        }
+    } catch (error) {
+        handleLoginError('Network error');
     }
 }
 

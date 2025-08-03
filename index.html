@@ -3,104 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PC Parts Inventory Management System</title>
-    <link rel="stylesheet" href="style.css" />
-    <!-- Prevent content flash during authentication check -->
-    <style>
-      /* Hide main content until authentication is verified */
-      .container {
-        display: none;
-      }
-
-      /* Loading screen shown during authentication check */
-      .auth-loading {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        color: white;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      }
-
-      .auth-loading .logo {
-        font-size: 4rem;
-        margin-bottom: 20px;
-        animation: pulse 2s ease-in-out infinite;
-      }
-
-      .auth-loading .title {
-        font-size: 1.8rem;
-        font-weight: 700;
-        margin-bottom: 10px;
-      }
-
-      .auth-loading .message {
-        font-size: 1.1rem;
-        margin-bottom: 40px;
-        opacity: 0.9;
-      }
-
-      .auth-loading .spinner {
-        width: 50px;
-        height: 50px;
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid white;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-
-      @keyframes pulse {
-        0%,
-        100% {
-          transform: scale(1);
-          opacity: 1;
-        }
-        50% {
-          transform: scale(1.05);
-          opacity: 0.8;
-        }
-      }
-
-      /* Smooth transition for main content */
-      .container.loaded {
-        display: flex;
-        opacity: 0;
-        animation: fadeIn 0.5s ease-out forwards;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    </style>
+    <title>Hardware Manager</title>
+    <link rel="stylesheet" href="style.css?v=5" />
   </head>
   <body>
     <!-- Authentication Loading Screen -->
     <div id="authLoading" class="auth-loading">
-      <div class="logo">🖥️</div>
-      <div class="title">PC Inventory</div>
+      <div class="logo">🔧</div>
+      <div class="title">Hardware Manager</div>
       <div class="message">Management System</div>
       <div class="spinner"></div>
     </div>
@@ -111,8 +21,8 @@
       <div class="sidebar">
         <div class="sidebar-header">
           <div class="logo">
-            <span class="logo-icon">🖥️</span>
-            PC Inventory
+            <span class="logo-icon">🔧</span>
+            Hardware Manager
           </div>
         </div>
         <nav class="nav-menu">
@@ -163,7 +73,11 @@
         <div id="dashboard-page" class="page active">
           <!-- Stats Cards -->
           <div class="stats-grid">
-            <div class="stat-card blue">
+            <div
+              class="stat-card blue"
+              id="statTotalParts"
+              style="cursor: pointer"
+            >
               <div class="stat-icon">📦</div>
               <div class="stat-info">
                 <div class="stat-number" id="totalParts">0</div>
@@ -184,7 +98,11 @@
                 <div class="stat-label">Total Inventory Value</div>
               </div>
             </div>
-            <div class="stat-card red">
+            <div
+              class="stat-card red"
+              id="statPendingOrders"
+              style="cursor: pointer"
+            >
               <div class="stat-icon">📋</div>
               <div class="stat-info">
                 <div class="stat-number" id="pendingOrders">0</div>
@@ -195,16 +113,17 @@
 
           <!-- Dashboard Analytics -->
           <div class="dashboard-analytics">
-            <div class="chart-container">
+            <div class="chart-container dashboard-analytics-container">
               <h3>📊 Inventory Analytics</h3>
-              <div class="chart-content">
-                <div class="chart-section">
-                  <h4>💾 Parts by Category</h4>
+              <div class="chart-content dashboard-analytics-content">
+                <div class="dashboard-card dashboard-parts-category">
+                  <h4 class="chart-section-title">💾 Parts by Category</h4>
                   <div class="bar-chart" id="categoryChart"></div>
                 </div>
-                <div class="chart-section">
+                <div class="chart-section dashboard-analytics-section">
                   <h4>📈 Stock Level Distribution</h4>
                   <div class="pie-chart" id="stockChart">
+                    <div id="stockDonut"></div>
                     <div class="pie-legend">
                       <div class="legend-item">
                         <span class="legend-color in-stock"></span>
@@ -226,6 +145,32 @@
                   </div>
                 </div>
               </div>
+            </div>
+            <!-- Weekly Orders (DUPLICATED) -->
+            <div class="dashboard-card dashboard-weekly-orders">
+              <h4 class="chart-section-title">📊 Weekly Orders</h4>
+              <div class="analytics-filters dashboard-weekly-orders-filters">
+                <select id="dashboardMonthFilter" class="filter-select-compact">
+                  <option value="0">January</option>
+                  <option value="1">February</option>
+                  <option value="2">March</option>
+                  <option value="3">April</option>
+                  <option value="4">May</option>
+                  <option value="5">June</option>
+                  <option value="6">July</option>
+                  <option value="7">August</option>
+                  <option value="8">September</option>
+                  <option value="9">October</option>
+                  <option value="10">November</option>
+                  <option value="11">December</option>
+                </select>
+                <select id="dashboardYearFilter" class="filter-select-compact">
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+              </div>
+              <div class="mini-chart" id="dashboardWeeklyOrderChart"></div>
             </div>
           </div>
         </div>
@@ -363,12 +308,14 @@
                   <button
                     class="btn btn-warning btn-sm edit-btn"
                     title="Edit Order"
+                    onclick="handleEditClick(this)"
                   >
                     ✏️
                   </button>
                   <button
                     class="btn btn-danger btn-sm delete-btn"
                     title="Delete Order"
+                    onclick="handleDeleteClick(this)"
                   >
                     🗑️
                   </button>
@@ -414,10 +361,11 @@
               />
               <select id="actionTypeFilter" class="filter-select">
                 <option value="">All Actions</option>
-                <option value="Addition">Addition</option>
-                <option value="Update">Update</option>
-                <option value="Order Impact">Order Impact</option>
-                <option value="Deletion">Deletion</option>
+                <option value="Stock Added">Stock Added</option>
+                <option value="Update Order">Update Order</option>
+                <option value="Create Order">Create Order</option>
+                <option value="Completed">Completed</option>
+                <option value="Deleted">Deleted</option>
               </select>
             </div>
             <button class="btn btn-secondary" onclick="clearActivityFilters()">
@@ -432,6 +380,7 @@
                   <th>Timestamp</th>
                   <th>Part Name</th>
                   <th>Part ID</th>
+                  <th>Order ID</th>
                   <th>Action Type</th>
                   <th>Details</th>
                 </tr>
@@ -445,197 +394,222 @@
 
         <!-- Reports Page -->
         <div id="reports-page" class="page">
-          <h2>📈 Reports & Analytics</h2>
-
-          <!-- Inventory Analytics Section -->
-          <div class="dashboard-analytics" style="margin-bottom: 30px">
-            <div class="chart-container">
-              <h3>📊 Inventory Analytics</h3>
-              <div class="chart-content">
-                <div class="chart-section">
-                  <h4>💾 Parts by Category</h4>
-                  <div class="bar-chart" id="reportsCategoryChart"></div>
+          <div class="reports-main-layout">
+            <!-- INVENTORY (top left) -->
+            <div class="reports-section inventory-section">
+              <div class="section-header"><h3>📦 INVENTORY</h3></div>
+              <div class="section-content">
+                <!-- Inventory Summary -->
+                <div class="report-box">
+                  <div class="report-box-header">
+                    <h4>📊 Inventory Summary</h4>
+                  </div>
+                  <div class="report-box-content">
+                    <div class="report-stats-compact">
+                      <div class="stat-item">
+                        <span class="stat-label">Total Parts:</span
+                        ><span class="stat-value" id="reportTotalParts">0</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Total Value:</span
+                        ><span class="stat-value" id="reportTotalValue"
+                          >₱0</span
+                        >
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Categories:</span
+                        ><span class="stat-value" id="reportCategories">0</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="chart-section">
-                  <h4>📈 Stock Level Distribution</h4>
-                  <div class="pie-chart" id="reportsStockChart">
-                    <div class="pie-legend">
-                      <div class="legend-item">
-                        <span class="legend-color in-stock"></span>
-                        <span>In Stock</span>
+                <!-- Parts by Category -->
+                <div class="report-box">
+                  <div class="report-box-header">
+                    <h4>📊 Parts by Category</h4>
+                  </div>
+                  <div class="report-box-content">
+                    <div class="bar-chart" id="reportsCategoryChart"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- STOCK LEVEL (top right) -->
+            <div class="reports-section stocklevel-section">
+              <div class="section-header"><h3>📊 STOCK LEVEL</h3></div>
+              <div class="section-content">
+                <!-- Stock Level Summary -->
+                <div class="report-box">
+                  <div class="report-box-header"><h4>📈 Stock Levels</h4></div>
+                  <div class="report-box-content">
+                    <div class="stock-grid-compact">
+                      <div
+                        class="stock-item-compact out-stock-item"
+                        onclick="showStockDetails('out')"
+                      >
+                        <div class="stock-count" id="outStockCount">0</div>
+                        <div class="stock-type">Out of Stock</div>
                       </div>
-                      <div class="legend-item">
-                        <span class="legend-color low-stock"></span>
-                        <span>Low Stock</span>
+                      <div
+                        class="stock-item-compact low-stock-item"
+                        onclick="showStockDetails('low')"
+                      >
+                        <div class="stock-count" id="lowStockCount">0</div>
+                        <div class="stock-type">Low Stock</div>
                       </div>
-                      <div class="legend-item">
-                        <span class="legend-color out-stock"></span>
-                        <span>Out of Stock</span>
+                      <div
+                        class="stock-item-compact in-stock-item"
+                        onclick="showStockDetails('in')"
+                      >
+                        <div class="stock-count" id="inStockCount">0</div>
+                        <div class="stock-type">In Stock</div>
                       </div>
-                      <div class="legend-item">
-                        <span class="legend-color discontinued"></span>
-                        <span>Discontinued</span>
+                      <div
+                        class="stock-item-compact discontinued-item"
+                        onclick="showStockDetails('discontinued')"
+                      >
+                        <div class="stock-count" id="discontinuedCount">0</div>
+                        <div class="stock-type">Discontinued</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Stock Distribution Pie Chart -->
+                <div class="report-box">
+                  <div class="report-box-header">
+                    <h4>📊 Stock Level Distribution</h4>
+                  </div>
+                  <div class="report-box-content">
+                    <div class="pie-chart" id="reportsStockChart">
+                      <div id="reportsStockDonut"></div>
+                      <div class="pie-legend">
+                        <div class="legend-item">
+                          <span class="legend-color in-stock"></span>
+                          <span>In Stock</span>
+                        </div>
+                        <div class="legend-item">
+                          <span class="legend-color low-stock"></span>
+                          <span>Low Stock</span>
+                        </div>
+                        <div class="legend-item">
+                          <span class="legend-color out-stock"></span>
+                          <span>Out of Stock</span>
+                        </div>
+                        <div class="legend-item">
+                          <span class="legend-color discontinued"></span>
+                          <span>Discontinued</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="reports-grid">
-            <!-- Inventory Summary Box -->
-            <div class="report-box">
-              <div class="report-box-header">
-                <h3>📦 Inventory Summary</h3>
-              </div>
-              <div class="report-box-content">
-                <div class="report-stats-compact">
-                  <div class="stat-item">
-                    <span class="stat-label">Total Parts:</span>
-                    <span class="stat-value" id="reportTotalParts">0</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">Total Value:</span>
-                    <span class="stat-value" id="reportTotalValue">₱0</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">Categories:</span>
-                    <span class="stat-value" id="reportCategories">0</span>
+            <!-- ORDER (bottom, full width) -->
+            <div class="reports-section order-section">
+              <div class="section-header"><h3>📋 ORDER</h3></div>
+              <div class="section-content">
+                <!-- Order Summary -->
+                <div class="report-box">
+                  <div class="report-box-header"><h4>📋 Order Summary</h4></div>
+                  <div class="report-box-content">
+                    <div class="order-stats-compact">
+                      <div
+                        class="order-item-compact"
+                        onclick="showOrderDetails('pending')"
+                      >
+                        <span
+                          class="order-count pending-count"
+                          id="reportPendingOrders"
+                          >0</span
+                        ><span class="order-label">Pending</span>
+                      </div>
+                      <div
+                        class="order-item-compact"
+                        onclick="showOrderDetails('completed')"
+                      >
+                        <span class="order-count" id="reportCompletedOrders"
+                          >0</span
+                        ><span class="order-label">Completed</span>
+                      </div>
+                      <div
+                        class="order-item-compact"
+                        onclick="showOrderDetails('cancelled')"
+                      >
+                        <span class="order-count" id="reportCancelledOrders"
+                          >0</span
+                        ><span class="order-label">Cancelled</span>
+                      </div>
+                    </div>
+                    <div class="order-value-compact">
+                      <span>Total Value: </span
+                      ><span class="value-amount" id="reportCompletedValue"
+                        >₱0</span
+                      >
+                    </div>
                   </div>
                 </div>
-                <button
-                  class="btn btn-primary btn-sm"
-                  onclick="generateInventoryReport()"
-                >
-                  📄 Generate Report
-                </button>
-              </div>
-            </div>
-
-            <!-- Stock Level Summary Box -->
-            <div class="report-box">
-              <div class="report-box-header">
-                <h3>📊 Stock Levels</h3>
-              </div>
-              <div class="report-box-content">
-                <div class="stock-grid-compact">
-                  <!-- Top Row: In Stock, Low Stock -->
-                  <div
-                    class="stock-item-compact"
-                    onclick="showStockDetails('in')"
-                  >
-                    <div class="stock-count" id="inStockCount">0</div>
-                    <div class="stock-type">In Stock</div>
-                  </div>
-                  <div
-                    class="stock-item-compact"
-                    onclick="showStockDetails('low')"
-                  >
-                    <div class="stock-count" id="lowStockCount">0</div>
-                    <div class="stock-type">Low Stock</div>
-                  </div>
-                  <!-- Bottom Row: Out of Stock, Discontinued -->
-                  <div
-                    class="stock-item-compact"
-                    onclick="showStockDetails('out')"
-                  >
-                    <div class="stock-count" id="outStockCount">0</div>
-                    <div class="stock-type">Out of Stock</div>
-                  </div>
-                  <div
-                    class="stock-item-compact"
-                    onclick="showStockDetails('discontinued')"
-                  >
-                    <div class="stock-count" id="discontinuedCount">0</div>
-                    <div class="stock-type">Discontinued</div>
+                <!-- Weekly Orders -->
+                <div class="report-box">
+                  <div class="report-box-header"><h4>📊 Weekly Orders</h4></div>
+                  <div class="report-box-content">
+                    <div class="analytics-filters">
+                      <select id="monthFilter" class="filter-select-compact">
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                      </select>
+                      <select id="yearFilter" class="filter-select-compact">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                      </select>
+                    </div>
+                    <div class="mini-chart" id="weeklyOrderChart"></div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <!-- Order Summary Box -->
-            <div class="report-box">
-              <div class="report-box-header">
-                <h3>📋 Order Summary</h3>
-              </div>
-              <div class="report-box-content">
-                <div class="order-stats-compact">
-                  <div
-                    class="order-item-compact"
-                    onclick="showOrderDetails('pending')"
-                  >
-                    <span class="order-count" id="pendingOrdersCount">0</span>
-                    <span class="order-label">Pending</span>
+                <!-- Download Reports Section -->
+                <div class="report-box">
+                  <div class="report-box-header">
+                    <h4>📥 Download Reports</h4>
                   </div>
-                  <div
-                    class="order-item-compact"
-                    onclick="showOrderDetails('completed')"
-                  >
-                    <span class="order-count" id="completedOrdersCount">0</span>
-                    <span class="order-label">Completed</span>
+                  <div class="report-box-content">
+                    <div class="download-buttons">
+                      <button
+                        class="btn btn-primary"
+                        onclick="generateInventoryReport()"
+                      >
+                        📦 Download Inventory Report
+                      </button>
+                      <button
+                        class="btn btn-warning"
+                        onclick="generateStockAlertReport()"
+                      >
+                        ⚠️ Download Stock Alert Report
+                      </button>
+                      <button
+                        class="btn btn-info"
+                        onclick="generateOrderReport()"
+                      >
+                        📋 Download Order Report
+                      </button>
+                    </div>
                   </div>
-                  <div
-                    class="order-item-compact"
-                    onclick="showOrderDetails('cancelled')"
-                  >
-                    <span class="order-count" id="cancelledOrdersCount">0</span>
-                    <span class="order-label">Cancelled</span>
-                  </div>
-                </div>
-                <div class="order-value-compact">
-                  <span>Total Value: </span>
-                  <span class="value-amount" id="completedOrdersValue">₱0</span>
                 </div>
               </div>
             </div>
-
-            <!-- Analytics & Charts Box -->
-            <div class="report-box">
-              <div class="report-box-header">
-                <h3>📊 Analytics</h3>
-              </div>
-              <div class="report-box-content">
-                <div class="analytics-filters">
-                  <select id="monthFilter" class="filter-select-compact">
-                    <option value="0">January</option>
-                    <option value="1">February</option>
-                    <option value="2">March</option>
-                    <option value="3">April</option>
-                    <option value="4">May</option>
-                    <option value="5">June</option>
-                    <option value="6">July</option>
-                    <option value="7">August</option>
-                    <option value="8">September</option>
-                    <option value="9">October</option>
-                    <option value="10">November</option>
-                    <option value="11">December</option>
-                  </select>
-                  <select id="yearFilter" class="filter-select-compact">
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                    <option value="2026">2026</option>
-                  </select>
-                </div>
-                <div class="mini-chart" id="weeklyOrderChart"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Actions Row -->
-          <div class="report-actions-row">
-            <button class="btn btn-primary" onclick="generateInventoryReport()">
-              📦 Download Inventory Report
-            </button>
-            <button class="btn btn-success" onclick="generateOrderReport()">
-              📋 Download Order Report
-            </button>
-            <button
-              class="btn btn-warning"
-              onclick="generateStockAlertReport()"
-            >
-              ⚠️ Download Stock Alert Report
-            </button>
           </div>
         </div>
       </div>
@@ -751,40 +725,14 @@
             </div>
 
             <!-- Inline Category Form -->
-            <div
-              id="categoryFormContainer"
-              style="display: none; margin-bottom: 15px"
-            >
-              <div
-                style="
-                  background: #f8f9fa;
-                  padding: 20px;
-                  border-radius: 8px;
-                  border: 1px solid #e0e6ed;
-                "
-              >
+            <div id="categoryFormContainer" class="category-form-container">
+              <div class="category-form-inner">
                 <div class="grid-layout">
                   <div>
-                    <label
-                      style="
-                        font-size: 0.95rem;
-                        margin-bottom: 8px;
-                        display: block;
-                        font-weight: 600;
-                        color: #2c3e50;
-                      "
-                      >Category</label
-                    >
+                    <label class="category-form-label">Category</label>
                     <select
                       id="inlineCategorySelect"
-                      style="
-                        width: 100%;
-                        padding: 10px 12px;
-                        border: 2px solid #e0e6ed;
-                        border-radius: 6px;
-                        font-size: 0.95rem;
-                        background: white;
-                      "
+                      class="category-form-select"
                     >
                       <option value="">Select Category</option>
                       <option value="Processor (CPU)">Processor (CPU)</option>
@@ -801,54 +749,23 @@
                     </select>
                   </div>
                   <div>
-                    <label
-                      style="
-                        font-size: 0.95rem;
-                        margin-bottom: 8px;
-                        display: block;
-                        font-weight: 600;
-                        color: #2c3e50;
-                      "
-                      >Part Name</label
-                    >
+                    <label class="category-form-label">Part Name</label>
                     <select
                       id="inlineCategoryPart"
                       disabled
-                      style="
-                        width: 100%;
-                        padding: 10px 12px;
-                        border: 2px solid #e0e6ed;
-                        border-radius: 6px;
-                        font-size: 0.95rem;
-                        background: white;
-                      "
+                      class="category-form-select"
                     >
                       <option value="">Select Category First</option>
                     </select>
                   </div>
                   <div>
-                    <label
-                      style="
-                        font-size: 0.95rem;
-                        margin-bottom: 8px;
-                        display: block;
-                        font-weight: 600;
-                        color: #2c3e50;
-                      "
-                      >Quantity</label
-                    >
+                    <label class="category-form-label">Quantity</label>
                     <input
                       type="number"
                       id="inlineCategoryQuantity"
                       min="1"
                       placeholder="Qty"
-                      style="
-                        width: 100%;
-                        padding: 10px 12px;
-                        border: 2px solid #e0e6ed;
-                        border-radius: 6px;
-                        font-size: 0.95rem;
-                      "
+                      class="category-form-input"
                     />
                   </div>
                   <div>

@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS orders (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  orderId VARCHAR(50) NOT NULL UNIQUE,
+  categoryId VARCHAR(50),
+  partName VARCHAR(255),
+  date VARCHAR(50),
+  quantity INT,
+  status VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+); 

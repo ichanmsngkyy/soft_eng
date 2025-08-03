@@ -1,0 +1,13 @@
+source 'https://rubygems.org'
+
+gem 'sinatra'
+gem 'sinatra-contrib'
+gem 'bcrypt'
+gem 'jwt'
+gem 'dotenv'
+gem 'rack-cors'
+gem 'json'
+gem 'rackup'
+gem 'puma'
+gem 'prawn'
+gem 'prawn-table' 
